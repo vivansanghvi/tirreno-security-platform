@@ -1,0 +1,43 @@
+<?php
+
+/**
+ * tirreno ~ open-source security framework
+ * Copyright (c) Tirreno Technologies Sàrl (https://www.tirreno.com)
+ *
+ * Licensed under GNU Affero General Public License version 3 of the or any later version.
+ * For full copyright and license information, please see the LICENSE
+ * Redistributions of files must retain the above copyright notice.
+ *
+ * @copyright     Copyright (c) Tirreno Technologies Sàrl (https://www.tirreno.com)
+ * @license       https://opensource.org/licenses/AGPL-3.0 AGPL License
+ * @link          https://www.tirreno.com Tirreno(tm)
+ */
+
+declare(strict_types=1);
+
+namespace Tirreno\Crons;
+
+class RetentionPolicyViolations extends Base {
+    public function process(): void {
+        $this->logInfo('Start retention policy violations.');
+
+        $timer = tirreno('request')->setTimer();
+
+        $retentionKeys = tirreno('models')->retentionPolicies->getRetentionKeys();
+        $cnt = 0;
+        $fieldCnt = 0;
+
+        foreach ($retentionKeys as $key) {
+            // insuring clause
+            if ($key['retention_policy'] > 0) {
+                $cnt += tirreno('models')->events->retentionDeletion($key['retention_policy'], $key['id']);
+                $fieldCnt += tirreno('models')->fieldAuditTrail->retentionDeletion($key['retention_policy'], $key['id']);
+            }
+        }
+
+        $timer = tirreno('request')->getTimer($timer);
+
+        $this->logInfo('Deleted %s events and %s field audit trails for %s operators due to retention policy violations in %f.', $cnt, $fieldCnt, count($retentionKeys), $timer);
+        $this->summary = sprintf('Deleted %s events and %s field audit trails for %s operators due to retention policy violations in %f.', $cnt, $fieldCnt, count($retentionKeys), $timer);
+    }
+}
