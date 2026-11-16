@@ -1,0 +1,8 @@
+.git
+.github
+tests
+AGENTS.md
+phpunit.xml
+phpstan.neon
+phpcs.xml
+eslint.config.js

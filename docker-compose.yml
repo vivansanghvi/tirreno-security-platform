@@ -1,0 +1,31 @@
+# Local demo stack: builds this repository's Dockerfile and runs it with PostgreSQL 15.
+#   docker compose -p tirreno-demo up -d --build
+#   docker compose -p tirreno-demo exec -T -u www-data tirreno-app php docker/seed-demo.php
+# Open http://localhost:8686 (change with TIRRENO_PORT).
+
+services:
+  tirreno-app:
+    build: .
+    ports: ["${TIRRENO_PORT:-8686}:80"]
+    environment:
+      DATABASE_URL: "postgres://tirreno:secret@tirreno-db:5432/tirreno"
+      SITE: "localhost:${TIRRENO_PORT:-8686}"
+      FORCE_HTTPS: "false"
+    volumes:
+      - tirreno-config:/var/www/html/config/local
+    depends_on:
+      tirreno-db: {condition: service_healthy}
+
+  tirreno-db:
+    image: postgres:15
+    environment: {POSTGRES_DB: tirreno, POSTGRES_USER: tirreno, POSTGRES_PASSWORD: secret}
+    volumes:
+      - tirreno-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U tirreno -d tirreno"]
+      interval: 2s
+      retries: 30
+
+volumes:
+  tirreno-config:
+  tirreno-db:
